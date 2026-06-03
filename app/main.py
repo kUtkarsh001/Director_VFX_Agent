@@ -1,15 +1,14 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 import os
 
 from app.routes.jobs import router as jobs_router
+from app.routes.results import router as results_router
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Ensure traces directory exists for result file serving
     os.makedirs("traces", exist_ok=True)
     yield
 
@@ -29,5 +28,5 @@ app.add_middleware(
 )
 
 app.include_router(jobs_router)
+app.include_router(results_router)
 
-# Results router and static files for image serving added in Milestone 11
