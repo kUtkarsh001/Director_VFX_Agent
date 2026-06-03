@@ -7,16 +7,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ---------------------------------------------------------------------------
-# Model version constants — verified on replicate.com 2026-06-03
+# Model identifiers — using owner/name without a pinned version hash so
+# Replicate always resolves to the latest deployed version.
+# Verify / pin hashes at replicate.com before moving to production.
 # ---------------------------------------------------------------------------
-GROUNDED_SAM_MODEL = (
-    "adirik/grounded-sam:"
-    "b78e3e28af54e2a2d5d76bf8e37f7bc28f7cf94e3c7e9b25e9c9f4fc9e9b0e7"
-)
-MIDAS_MODEL = (
-    "cjwbw/midas:"
-    "a6ba5798f04f80d3b314de0f0a62277f21ab3503c60c84d4817de83c5edfdae0"
-)
+GROUNDED_SAM_MODEL    = "adirik/grounded-sam"
+MIDAS_MODEL           = "cjwbw/midas"
 SDXL_CONTROLNET_MODEL = "lucataco/sdxl-controlnet-depth"
 
 
