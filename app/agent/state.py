@@ -20,7 +20,18 @@ class VFXJobState(TypedDict):
     final_image:      Optional[bytes]     # Composited output image
 
     # --- Execution Metadata ---
-    nodes_executed:   list[str]           # Ordered log of completed nodes
+    nodes_executed:   list[str]
     errors:           list[dict]          # [{node, error_code, message, timestamp}]
-    quality_flags:    list[str]           # e.g., ["low_confidence_mask"]
-    status:           Literal["queued", "planning", "running", "done", "failed"]
+    quality_flags:    list[str]
+    status:           Literal[
+        "queued", "planning", "running",
+        "awaiting_confirmation", "clarification_required",
+        "done", "failed",
+    ]
+
+    # --- Error Recovery — added M9 ---
+    retry_count:      int
+    retry_target:     Optional[str]
+
+    # --- Per-node timing for /trace — added M11 ---
+    node_timings:     dict                # {node: {started_at, duration_ms}}
