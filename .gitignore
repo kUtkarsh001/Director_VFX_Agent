@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+wheels/
+pip-wheel-metadata/
+*.manifest
+*.spec
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Environment variables — NEVER commit this
+.env
+
+# Traces output (contents gitignored; directory tracked via .gitkeep)
+traces/*.png
+traces/*.json
+traces/*.jsonl
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+desktop.ini
+.DS_Store
+Thumbs.db
+
+# pytest
+.pytest_cache/
+htmlcov/
+.coverage
