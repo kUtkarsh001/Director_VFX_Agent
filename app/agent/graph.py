@@ -53,7 +53,10 @@ def route_after_segmentation(state: VFXJobState) -> str:
 
 def route_after_depth(state: VFXJobState) -> str:
     nodes = state.get("extracted_intent", {}).get("required_nodes", [])
-    # Depth failure is non-fatal if compositing is still required
+    # Depth failure is NON-FATAL by design. When compositing is required (the
+    # common case), we always proceed — compositing falls back to standard
+    # inpainting without depth conditioning. The error_recovery branch below
+    # only fires for the rare depth-only job where no compositing follows.
     if "compositing" in nodes:
         return "compositing"
     errors = state.get("errors", [])

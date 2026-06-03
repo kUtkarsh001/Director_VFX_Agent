@@ -52,10 +52,10 @@ def error_recovery_node(state: VFXJobState) -> VFXJobState:
         "started_at": started_at, "duration_ms": elapsed_ms(t0)
     }
     print(json.dumps({
-        "job_id":      state["job_id"], "node": _NODE,
-        "event":       "complete",      "can_retry": can_retry,
-        "retry_count": state["retry_count"],
-        "retry_target": state["retry_target"],
-        "timestamp":   datetime.now(timezone.utc).isoformat(),
+        "job_id":       state["job_id"], "node": _NODE,
+        "event":        "complete",      "can_retry": can_retry,
+        "retry_count":  state.get("retry_count", 0),   # safe — key may be absent in test states
+        "retry_target": state.get("retry_target"),
+        "timestamp":    datetime.now(timezone.utc).isoformat(),
     }))
     return state

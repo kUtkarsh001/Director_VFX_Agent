@@ -38,18 +38,25 @@ async def _run(state: VFXJobState) -> VFXJobState:
         mask_data = httpx.get(mask_url, timeout=30).content
         masks     = {label: mask_data for label in targets}
 
-        # Confidence proxy: check mask area vs image area
+        # Coverage proxy: fraction of image pixels that are masked.
+        # NOTE: This is NOT a true SAM IoU score — SAM's internal logits are
+        # not exposed by the Replicate endpoint. This is a coarse sanity check:
+        # if < 1% of the image is masked the result is almost certainly garbage
+        # (model detected nothing), so we floor at 0.4 and flag only that case.
         from PIL import Image
         import io
         first_mask = Image.open(io.BytesIO(mask_data))
         img_area   = first_mask.width * first_mask.height
         mask_area  = sum(1 for p in first_mask.getdata() if p > 127)
-        confidence = min(mask_area / max(img_area, 1), 1.0)
-        confidence = 0.4 if confidence < 0.01 else confidence
+        coverage   = min(mask_area / max(img_area, 1), 1.0)
+
+        # Small but valid objects (birds, logos, etc.) have low coverage but
+        # are perfectly segmented. Only flag truly degenerate cases (< 1%).
+        confidence = max(coverage, 0.4)  # floor — prevents false quality flags
 
         state["masks"]           = masks
         state["mask_confidence"] = confidence
-        if confidence < 0.6:
+        if coverage < 0.01:   # truly degenerate: model likely detected nothing
             state["quality_flags"].append("low_confidence_mask")
 
     except Exception as exc:

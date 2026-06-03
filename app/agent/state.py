@@ -15,7 +15,7 @@ class VFXJobState(TypedDict):
 
     # --- Tool Outputs ---
     masks:            Optional[dict]      # {object_name: alpha_mask_bytes}
-    mask_confidence:  Optional[float]     # IoU score from SAM
+    mask_confidence:  Optional[float]     # Coverage proxy (mask px / img px); NOT a SAM IoU score
     depth_map:        Optional[bytes]     # Depth image bytes from MiDaS
     final_image:      Optional[bytes]     # Composited output image
 
