@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 from app.agent.state import VFXJobState
 from app.services.anthropic_client import call_planner
+from app.services.cost_guard import check_cost, CostLimitExceeded
 
 _MEDIA_MAP = {
     "jpeg": "image/jpeg",
@@ -29,6 +30,20 @@ async def _run_planner(state: VFXJobState) -> VFXJobState:
     # Clarification guard — do NOT append to nodes_executed if unclear
     if state["plan_confidence"] < 0.7 or plan.get("clarification_needed", False):
         state["status"] = "clarification_required"
+        return state
+
+    # Cost guard — abort before any Replicate call if budget would be exceeded
+    image_size_mb  = len(state.get("original_image", b"")) / 1024 / 1024
+    required_nodes = plan.get("required_nodes", [])
+    try:
+        check_cost(required_nodes, image_size_mb)
+    except CostLimitExceeded as exc:
+        state["errors"].append({
+            "node": "nlp_planner", "error_code": "COST_LIMIT_EXCEEDED",
+            "message": str(exc),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        })
+        state["status"] = "failed"
         return state
 
     # Success path
