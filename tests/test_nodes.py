@@ -6,6 +6,7 @@ from PIL import Image
 
 from app.agent.state import VFXJobState
 from app.agent.nodes.input_guard import input_guard_node
+from app.agent.nodes.nlp_planner import nlp_planner_node
 from app.services.anthropic_client import _strip_fences, call_planner
 
 
@@ -194,3 +195,66 @@ async def test_call_planner_passes_correct_model(monkeypatch):
     call_kwargs = mock_client.messages.create.call_args.kwargs
     assert call_kwargs["model"] == "claude-sonnet-4-20250514"
     assert call_kwargs["temperature"] == 0.1
+
+
+# ===========================================================================
+# Milestone 3 — nlp_planner_node tests (all mocked, no live API calls)
+# ===========================================================================
+
+def _patch_call_planner(plan: dict):
+    """Patch call_planner in the nlp_planner module to return plan synchronously."""
+    async def _fake(*args, **kwargs):
+        return plan
+    return patch("app.agent.nodes.nlp_planner.call_planner", side_effect=_fake)
+
+
+def _planner_state(prompt: str = "remove the background and replace sky") -> VFXJobState:
+    img = _make_jpeg()
+    state = _make_state(img, prompt)
+    state["image_format"] = "jpeg"
+    state["status"]       = "planning"
+    return state
+
+
+def test_nlp_planner_happy_path():
+    state = _planner_state()
+    with _patch_call_planner(VALID_PLAN):
+        result = nlp_planner_node(state)
+    assert result["status"] == "running"
+    assert result["plan_confidence"] == 0.92
+    assert result["execution_plan"] == VALID_PLAN["plan_summary"]
+    assert result["extracted_intent"]["required_nodes"] == ["segmentation", "depth_estimation", "compositing"]
+    assert "nlp_planner" in result["nodes_executed"]
+
+
+def test_nlp_planner_low_confidence_triggers_clarification():
+    low_conf_plan = {**VALID_PLAN, "confidence": 0.55, "clarification_needed": False}
+    state = _planner_state("do something cool")
+    with _patch_call_planner(low_conf_plan):
+        result = nlp_planner_node(state)
+    assert result["status"] == "clarification_required"
+    assert "nlp_planner" not in result["nodes_executed"]
+
+
+def test_nlp_planner_clarification_flag_triggers_clarification():
+    clarification_plan = {
+        **VALID_PLAN,
+        "confidence":             0.85,
+        "clarification_needed":   True,
+        "clarification_question": "Do you want to replace just the sky or the whole background?",
+    }
+    state = _planner_state("change the background maybe")
+    with _patch_call_planner(clarification_plan):
+        result = nlp_planner_node(state)
+    assert result["status"] == "clarification_required"
+    assert "nlp_planner" not in result["nodes_executed"]
+
+
+def test_nlp_planner_stores_full_extracted_intent():
+    state = _planner_state()
+    with _patch_call_planner(VALID_PLAN):
+        result = nlp_planner_node(state)
+    intent = result["extracted_intent"]
+    assert intent["target_objects"] == ["person", "sky"]
+    assert intent["actions"]        == ["remove_object", "replace_background"]
+    assert intent["clarification_needed"] is False
