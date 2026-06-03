@@ -60,6 +60,17 @@ def route_after_compositing(state: VFXJobState) -> str:
     return END
 
 
+def route_after_error_recovery(state: VFXJobState) -> str:
+    """Retry the failing node once, then give up."""
+    target = state.get("retry_target")
+    count  = state.get("retry_count", 0)
+    if target and count <= 1 and target in (
+        "segmentation", "depth_estimation", "compositing"
+    ):
+        return target
+    return END
+
+
 # ---------------------------------------------------------------------------
 # Graph construction (architecture.md Section 6)
 # ---------------------------------------------------------------------------
@@ -88,6 +99,6 @@ def build_vfx_graph():
     graph.add_conditional_edges("depth_estimation", route_after_depth)
     graph.add_conditional_edges("compositing",      route_after_compositing)
     graph.add_edge("filter",         END)
-    graph.add_edge("error_recovery", END)
+    graph.add_conditional_edges("error_recovery", route_after_error_recovery)
 
     return graph.compile()
