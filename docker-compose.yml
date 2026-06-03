@@ -1,0 +1,32 @@
+version: "3.9"
+
+services:
+  vfx-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: vfx-director-agent
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      # Persist traces between restarts
+      - ./traces:/app/traces
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # Optional: swap the in-memory JobStore for Redis in production
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: vfx-redis
+  #   restart: unless-stopped
+  #   ports:
+  #     - "6379:6379"
