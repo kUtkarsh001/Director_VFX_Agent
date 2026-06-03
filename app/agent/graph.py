@@ -32,8 +32,17 @@ def route_after_planner(state: VFXJobState) -> str:
 
 
 def route_after_segmentation(state: VFXJobState) -> str:
-    if state.get("errors"):
+    errors = state.get("errors", [])
+    # Only re-route to error_recovery if the LATEST error is from this node
+    # and it has not already been dispatched to a retry
+    latest_is_seg_error = (
+        errors
+        and errors[-1].get("node") == "segmentation"
+        and state.get("retry_target") != "segmentation"
+    )
+    if latest_is_seg_error:
         return "error_recovery"
+
     nodes = state.get("extracted_intent", {}).get("required_nodes", [])
     if "depth_estimation" in nodes:
         return "depth_estimation"
@@ -47,7 +56,13 @@ def route_after_depth(state: VFXJobState) -> str:
     # Depth failure is non-fatal if compositing is still required
     if "compositing" in nodes:
         return "compositing"
-    if state.get("errors"):
+    errors = state.get("errors", [])
+    latest_is_depth_error = (
+        errors
+        and errors[-1].get("node") == "depth_estimation"
+        and state.get("retry_target") != "depth_estimation"
+    )
+    if latest_is_depth_error:
         return "error_recovery"
     return END
 
@@ -55,7 +70,13 @@ def route_after_depth(state: VFXJobState) -> str:
 def route_after_compositing(state: VFXJobState) -> str:
     if state.get("status") == "done":
         return END
-    if state.get("errors"):
+    errors = state.get("errors", [])
+    latest_is_comp_error = (
+        errors
+        and errors[-1].get("node") == "compositing"
+        and state.get("retry_target") != "compositing"
+    )
+    if latest_is_comp_error:
         return "error_recovery"
     return END
 

@@ -79,7 +79,8 @@ async def create_job(
         err = validated["errors"][0]
         return JSONResponse(400, _err(err["error_code"], err["message"], "input_guard"))
 
-    await job_store.create_job(job_id, initial_state, confirm_plan=confirm_plan)
+    # Store the already-validated state so the background graph skips re-validation
+    await job_store.create_job(job_id, validated, confirm_plan=confirm_plan)
     background_tasks.add_task(_run_graph, job_id)
 
     return _ok({

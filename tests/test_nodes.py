@@ -31,6 +31,9 @@ def _make_state(image_bytes: bytes, prompt: str) -> VFXJobState:
         errors=[],
         quality_flags=[],
         status="queued",
+        retry_count=0,
+        retry_target=None,
+        node_timings={},
     )
 
 

@@ -22,6 +22,10 @@ def _fail(state: VFXJobState, code: str, message: str) -> VFXJobState:
 
 
 def input_guard_node(state: VFXJobState) -> VFXJobState:
+    # If state was already validated inline in the route handler, skip
+    if state.get("status") not in ("queued", None):
+        return state
+
     # --- Validate prompt -----------------------------------------------
     prompt = state.get("user_prompt", "")
     if not prompt or not prompt.strip():

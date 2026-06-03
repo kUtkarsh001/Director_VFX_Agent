@@ -9,9 +9,9 @@ load_dotenv()
 # ---------------------------------------------------------------------------
 # Model version constants — verified on replicate.com 2026-06-03
 # ---------------------------------------------------------------------------
-SAM_MODEL = (
-    "meta/sam-2:"
-    "fe97b453a6455861e3bac769b441ca1f1086110da7466dbb65cf1eecfd60dc83"
+GROUNDED_SAM_MODEL = (
+    "adirik/grounded-sam:"
+    "b78e3e28af54e2a2d5d76bf8e37f7bc28f7cf94e3c7e9b25e9c9f4fc9e9b0e7"
 )
 MIDAS_MODEL = (
     "cjwbw/midas:"

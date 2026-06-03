@@ -3,9 +3,11 @@ import base64
 import json
 from datetime import datetime, timezone
 
+import httpx
+
 from app.agent.state import VFXJobState
 from app.agent.timing import start_timer, elapsed_ms
-from app.services.replicate_client import run_model, SAM_MODEL
+from app.services.replicate_client import run_model, GROUNDED_SAM_MODEL
 
 _NODE = "segmentation"
 
@@ -17,27 +19,29 @@ async def _run(state: VFXJobState) -> VFXJobState:
     if _NODE not in nodes:
         return state
 
-    img_b64  = base64.b64encode(state["original_image"]).decode()
-    targets  = state["extracted_intent"].get("target_objects", [])
+    img_b64 = base64.b64encode(state["original_image"]).decode()
+    targets = state["extracted_intent"].get("target_objects", [])
 
     try:
-        output = await run_model(SAM_MODEL, {"image": img_b64, "labels": ",".join(targets)})
+        # Grounded-SAM accepts free-text labels via text_prompt.
+        # It internally uses Grounding DINO for detection, then SAM for masking.
+        output = await run_model(
+            GROUNDED_SAM_MODEL,
+            {
+                "image":       img_b64,
+                "text_prompt": " . ".join(targets),
+            }
+        )
 
-        # SAM returns list of mask outputs; build {label: mask_bytes} dict
-        masks: dict = {}
-        raw_masks = output if isinstance(output, list) else [output]
-        for i, item in enumerate(raw_masks):
-            label = targets[i] if i < len(targets) else f"object_{i}"
-            # item may be a URL string or FileOutput; convert to bytes via httpx
-            import httpx
-            url  = str(item)
-            data = httpx.get(url, timeout=30).content
-            masks[label] = data
+        # output[-1] is the combined binary mask URL
+        mask_url  = str(output[-1]) if isinstance(output, list) else str(output)
+        mask_data = httpx.get(mask_url, timeout=30).content
+        masks     = {label: mask_data for label in targets}
 
         # Confidence proxy: check mask area vs image area
         from PIL import Image
         import io
-        first_mask = Image.open(io.BytesIO(next(iter(masks.values()))))
+        first_mask = Image.open(io.BytesIO(mask_data))
         img_area   = first_mask.width * first_mask.height
         mask_area  = sum(1 for p in first_mask.getdata() if p > 127)
         confidence = min(mask_area / max(img_area, 1), 1.0)
